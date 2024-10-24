@@ -25,7 +25,7 @@ use topological_sort::TopologicalSort;
 
 use crate::errors::*;
 use crate::preprocess::{
-    CmdPreprocessor, IndexPreprocessor, LinkPreprocessor, Preprocessor, PreprocessorContext,
+    CmdPreprocessor, IndexPreprocessor, LinkPreprocessor, Preprocessor, PreprocessorContext, TooltipPreprocessor,
 };
 use crate::renderer::{CmdRenderer, HtmlHandlebars, MarkdownRenderer, RenderContext, Renderer};
 use crate::utils;
@@ -452,11 +452,11 @@ fn determine_renderers(config: &Config) -> Vec<Box<dyn Renderer>> {
     renderers
 }
 
-const DEFAULT_PREPROCESSORS: &[&str] = &["links", "index"];
+const DEFAULT_PREPROCESSORS: &[&str] = &["links", "index", "tooltips"];
 
 fn is_default_preprocessor(pre: &dyn Preprocessor) -> bool {
     let name = pre.name();
-    name == LinkPreprocessor::NAME || name == IndexPreprocessor::NAME
+    name == LinkPreprocessor::NAME || name == IndexPreprocessor::NAME || name == TooltipPreprocessor::NAME
 }
 
 /// Look at the `MDBook` and try to figure out what preprocessors to run.
@@ -547,9 +547,10 @@ fn determine_preprocessors(config: &Config) -> Result<Vec<Box<dyn Preprocessor>>
         names.sort();
         for name in names {
             let preprocessor: Box<dyn Preprocessor> = match name.as_str() {
-                "links" => Box::new(LinkPreprocessor::new()),
-                "index" => Box::new(IndexPreprocessor::new()),
-                _ => {
+                "tooltips" => Box::new(TooltipPreprocessor::new()),
+                "links"    => Box::new(LinkPreprocessor::new()),
+                "index"    => Box::new(IndexPreprocessor::new()),
+                _          => {
                     // The only way to request a custom preprocessor is through the `preprocessor`
                     // table, so it must exist, be a table, and contain the key.
                     let table = &config.get("preprocessor").unwrap().as_table().unwrap()[&name];
@@ -674,7 +675,7 @@ mod tests {
         let got = determine_preprocessors(&cfg);
 
         assert!(got.is_ok());
-        assert_eq!(got.as_ref().unwrap().len(), 2);
+        assert_eq!(got.as_ref().unwrap().len(), 3);
         assert_eq!(got.as_ref().unwrap()[0].name(), "index");
         assert_eq!(got.as_ref().unwrap()[1].name(), "links");
     }
